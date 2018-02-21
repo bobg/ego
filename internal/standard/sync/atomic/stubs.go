@@ -1,0 +1,36 @@
+package atomic
+
+import (
+	"reflect"
+	"sync/atomic"
+)
+
+var SwapUint64 = reflect.ValueOf(atomic.SwapUint64)
+var SwapPointer = reflect.ValueOf(atomic.SwapPointer)
+var LoadInt32 = reflect.ValueOf(atomic.LoadInt32)
+var LoadUintptr = reflect.ValueOf(atomic.LoadUintptr)
+var StoreUint64 = reflect.ValueOf(atomic.StoreUint64)
+var StoreUintptr = reflect.ValueOf(atomic.StoreUintptr)
+var LoadPointer = reflect.ValueOf(atomic.LoadPointer)
+var CompareAndSwapPointer = reflect.ValueOf(atomic.CompareAndSwapPointer)
+var AddUint32 = reflect.ValueOf(atomic.AddUint32)
+var AddInt64 = reflect.ValueOf(atomic.AddInt64)
+var LoadUint32 = reflect.ValueOf(atomic.LoadUint32)
+var StoreInt32 = reflect.ValueOf(atomic.StoreInt32)
+var SwapUintptr = reflect.ValueOf(atomic.SwapUintptr)
+var CompareAndSwapInt32 = reflect.ValueOf(atomic.CompareAndSwapInt32)
+var AddUint64 = reflect.ValueOf(atomic.AddUint64)
+var StoreInt64 = reflect.ValueOf(atomic.StoreInt64)
+var SwapInt32 = reflect.ValueOf(atomic.SwapInt32)
+var CompareAndSwapUint64 = reflect.ValueOf(atomic.CompareAndSwapUint64)
+var AddUintptr = reflect.ValueOf(atomic.AddUintptr)
+var SwapInt64 = reflect.ValueOf(atomic.SwapInt64)
+var CompareAndSwapInt64 = reflect.ValueOf(atomic.CompareAndSwapInt64)
+var LoadInt64 = reflect.ValueOf(atomic.LoadInt64)
+var StorePointer = reflect.ValueOf(atomic.StorePointer)
+var SwapUint32 = reflect.ValueOf(atomic.SwapUint32)
+var AddInt32 = reflect.ValueOf(atomic.AddInt32)
+var LoadUint64 = reflect.ValueOf(atomic.LoadUint64)
+var CompareAndSwapUint32 = reflect.ValueOf(atomic.CompareAndSwapUint32)
+var CompareAndSwapUintptr = reflect.ValueOf(atomic.CompareAndSwapUintptr)
+var StoreUint32 = reflect.ValueOf(atomic.StoreUint32)

@@ -1,0 +1,36 @@
+package constant
+
+import (
+	"go/constant"
+	"reflect"
+)
+
+var MakeUint64 = reflect.ValueOf(constant.MakeUint64)
+var ToInt = reflect.ValueOf(constant.ToInt)
+var ToComplex = reflect.ValueOf(constant.ToComplex)
+var Float32Val = reflect.ValueOf(constant.Float32Val)
+var Sign = reflect.ValueOf(constant.Sign)
+var UnaryOp = reflect.ValueOf(constant.UnaryOp)
+var StringVal = reflect.ValueOf(constant.StringVal)
+var MakeFloat64 = reflect.ValueOf(constant.MakeFloat64)
+var MakeFromLiteral = reflect.ValueOf(constant.MakeFromLiteral)
+var Uint64Val = reflect.ValueOf(constant.Uint64Val)
+var Float64Val = reflect.ValueOf(constant.Float64Val)
+var Denom = reflect.ValueOf(constant.Denom)
+var Shift = reflect.ValueOf(constant.Shift)
+var MakeImag = reflect.ValueOf(constant.MakeImag)
+var MakeUnknown = reflect.ValueOf(constant.MakeUnknown)
+var Real = reflect.ValueOf(constant.Real)
+var MakeString = reflect.ValueOf(constant.MakeString)
+var BinaryOp = reflect.ValueOf(constant.BinaryOp)
+var MakeBool = reflect.ValueOf(constant.MakeBool)
+var Int64Val = reflect.ValueOf(constant.Int64Val)
+var Bytes = reflect.ValueOf(constant.Bytes)
+var Compare = reflect.ValueOf(constant.Compare)
+var Imag = reflect.ValueOf(constant.Imag)
+var MakeInt64 = reflect.ValueOf(constant.MakeInt64)
+var BoolVal = reflect.ValueOf(constant.BoolVal)
+var Num = reflect.ValueOf(constant.Num)
+var ToFloat = reflect.ValueOf(constant.ToFloat)
+var BitLen = reflect.ValueOf(constant.BitLen)
+var MakeFromBytes = reflect.ValueOf(constant.MakeFromBytes)

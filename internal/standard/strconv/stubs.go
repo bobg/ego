@@ -1,0 +1,38 @@
+package strconv
+
+import (
+	"reflect"
+	"strconv"
+)
+
+var ParseUint = reflect.ValueOf(strconv.ParseUint)
+var ParseInt = reflect.ValueOf(strconv.ParseInt)
+var Atoi = reflect.ValueOf(strconv.Atoi)
+var IsPrint = reflect.ValueOf(strconv.IsPrint)
+var IsGraphic = reflect.ValueOf(strconv.IsGraphic)
+var QuoteRuneToGraphic = reflect.ValueOf(strconv.QuoteRuneToGraphic)
+var QuoteRune = reflect.ValueOf(strconv.QuoteRune)
+var QuoteToGraphic = reflect.ValueOf(strconv.QuoteToGraphic)
+var AppendQuoteToGraphic = reflect.ValueOf(strconv.AppendQuoteToGraphic)
+var Quote = reflect.ValueOf(strconv.Quote)
+var QuoteToASCII = reflect.ValueOf(strconv.QuoteToASCII)
+var AppendQuote = reflect.ValueOf(strconv.AppendQuote)
+var QuoteRuneToASCII = reflect.ValueOf(strconv.QuoteRuneToASCII)
+var Unquote = reflect.ValueOf(strconv.Unquote)
+var AppendQuoteRune = reflect.ValueOf(strconv.AppendQuoteRune)
+var CanBackquote = reflect.ValueOf(strconv.CanBackquote)
+var UnquoteChar = reflect.ValueOf(strconv.UnquoteChar)
+var AppendQuoteRuneToASCII = reflect.ValueOf(strconv.AppendQuoteRuneToASCII)
+var AppendQuoteRuneToGraphic = reflect.ValueOf(strconv.AppendQuoteRuneToGraphic)
+var AppendQuoteToASCII = reflect.ValueOf(strconv.AppendQuoteToASCII)
+var FormatInt = reflect.ValueOf(strconv.FormatInt)
+var Itoa = reflect.ValueOf(strconv.Itoa)
+var AppendInt = reflect.ValueOf(strconv.AppendInt)
+var FormatUint = reflect.ValueOf(strconv.FormatUint)
+var AppendUint = reflect.ValueOf(strconv.AppendUint)
+var ParseFloat = reflect.ValueOf(strconv.ParseFloat)
+var AppendBool = reflect.ValueOf(strconv.AppendBool)
+var ParseBool = reflect.ValueOf(strconv.ParseBool)
+var FormatBool = reflect.ValueOf(strconv.FormatBool)
+var FormatFloat = reflect.ValueOf(strconv.FormatFloat)
+var AppendFloat = reflect.ValueOf(strconv.AppendFloat)

@@ -1,0 +1,37 @@
+package flag
+
+import (
+	"flag"
+	"reflect"
+)
+
+var UnquoteUsage = reflect.ValueOf(flag.UnquoteUsage)
+var String = reflect.ValueOf(flag.String)
+var NArg = reflect.ValueOf(flag.NArg)
+var Parsed = reflect.ValueOf(flag.Parsed)
+var IntVar = reflect.ValueOf(flag.IntVar)
+var NFlag = reflect.ValueOf(flag.NFlag)
+var Arg = reflect.ValueOf(flag.Arg)
+var Args = reflect.ValueOf(flag.Args)
+var StringVar = reflect.ValueOf(flag.StringVar)
+var BoolVar = reflect.ValueOf(flag.BoolVar)
+var Duration = reflect.ValueOf(flag.Duration)
+var Uint64 = reflect.ValueOf(flag.Uint64)
+var Float64 = reflect.ValueOf(flag.Float64)
+var Set = reflect.ValueOf(flag.Set)
+var PrintDefaults = reflect.ValueOf(flag.PrintDefaults)
+var DurationVar = reflect.ValueOf(flag.DurationVar)
+var Lookup = reflect.ValueOf(flag.Lookup)
+var Parse = reflect.ValueOf(flag.Parse)
+var NewFlagSet = reflect.ValueOf(flag.NewFlagSet)
+var Int64Var = reflect.ValueOf(flag.Int64Var)
+var VisitAll = reflect.ValueOf(flag.VisitAll)
+var Visit = reflect.ValueOf(flag.Visit)
+var Uint64Var = reflect.ValueOf(flag.Uint64Var)
+var Float64Var = reflect.ValueOf(flag.Float64Var)
+var Int64 = reflect.ValueOf(flag.Int64)
+var UintVar = reflect.ValueOf(flag.UintVar)
+var Uint = reflect.ValueOf(flag.Uint)
+var Bool = reflect.ValueOf(flag.Bool)
+var Var = reflect.ValueOf(flag.Var)
+var Int = reflect.ValueOf(flag.Int)
