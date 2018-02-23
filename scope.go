@@ -13,7 +13,7 @@ type lazytype struct {
 type Scope struct {
 	parent *Scope
 
-	// values are reflect.Value or lazytype
+	// values are reflect.Value, lazytype, or imported Scopes
 	objs map[string]interface{}
 }
 
@@ -51,6 +51,17 @@ func (s *Scope) LookupType(name string) (reflect.Type, error) {
 		return s.parent.LookupType(name)
 	}
 	// xxx err
+}
+
+func (s *Scope) LookupScope(name string) (*Scope, error) {
+	if val, ok := s.objs[name]; ok {
+		if val, ok := val.(*Scope); ok {
+			return val, nil
+		}
+	}
+	if s.parent != nil {
+		return s.parent.LookupScope(name)
+	}
 }
 
 // Assign locates name and sets its value to val. It is an error for

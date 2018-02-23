@@ -94,7 +94,7 @@ func (scope *Scope) eval(expr ast.Expr) ([]reflect.Value, error) {
 
 	case *ast.FuncLit:
 		typ := convFuncType(expr.Type)
-		return []reflect.Value{reflect.MakeFunc(typ, fnWrapper(scope, nil, expr.Type, expr.Body))}, nil
+		return []reflect.Value{reflect.MakeFunc(typ, fnWrapper(scope, expr.Type, expr.Body))}, nil
 
 	case *ast.CompositeLit:
 		typ, err := scope.evalType(expr.Type)
@@ -170,11 +170,35 @@ func (scope *Scope) eval(expr ast.Expr) ([]reflect.Value, error) {
 		return scope.eval(expr.X)
 
 	case *ast.SelectorExpr:
+		// handle "package.Identifier"
+		if pkg, ok := expr.X.(*ast.Ident); ok {
+			importedScope, err := scope.LookupScope(pkg.Name)
+			if err == nil {
+				// xxx resolve expr.Sel in importedScope
+			}
+		}
+
 		baseVal, err := scope.eval1(expr.X)
 		if err != nil {
 			return nil, err
 		}
-		// xxx resolve expr.Sel in the context of baseVal
+		typ := baseVal.Type()
+		if typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Struct {
+			if baseVal.IsNil() {
+				// xxx err
+			}
+			baseVal = baseVal.Elem()
+			typ = typ.Elem()
+		}
+
+		if typ.Kind() == reflect.Struct() {
+			if _, ok := typ.FieldByName(expr.Sel.Name); ok {
+				return []reflect.Value{baseVal.FieldByName(expr.Sel.Name)}, nil
+			}
+		}
+
+		// xxx lookup a method for receivers of this type
+		// xxx (start with original baseVal and typ)
 
 	case *ast.IndexExpr:
 		baseVal, err := scope.eval1(expr.X)

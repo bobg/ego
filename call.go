@@ -12,21 +12,21 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 		switch name.Name {
 		case "close":
 			if len(expr.Args) != 1 {
-				// xxx err
+				return nil, errArgCount
 			}
 			v, err := scope.eval1(expr.Args[0])
 			if err != nil {
 				return nil, err
 			}
 			if v.Kind() != reflect.Chan {
-				// xxx err
+				return nil, errArgType
 			}
 			v.Close()
 			return nil, nil
 
 		case "len":
 			if len(expr.Args) != 1 {
-				// xxx err
+				return nil, errArgCount
 			}
 			v, err := scope.eval1(expr.Args[0])
 			if err != nil {
@@ -37,11 +37,11 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
 				return []reflect.Value{reflect.ValueOf(v.Len())}, nil
 			}
-			// xxx err
+			return nil, errArgType
 
 		case "cap":
 			if len(expr.Args) != 1 {
-				// xxx err
+				return nil, errArgCount
 			}
 			v, err := scope.eval1(expr.Args[0])
 			if err != nil {
@@ -52,11 +52,11 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 			case reflect.Array, reflect.Chan, reflect.Slice:
 				return []reflect.Value{reflect.ValueOf(v.Cap())}, nil
 			}
-			// xxx err
+			return nil, errArgType
 
 		case "new":
 			if len(expr.Args) != 1 {
-				// xxx err
+				return nil, errArgCount
 			}
 			typ, err := scope.evalType(expr.Args[0])
 			if err != nil {
@@ -66,7 +66,7 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 
 		case "make":
 			if len(expr.Args) < 1 {
-				// xxx err
+				return nil, errArgCount
 			}
 			typ, err := scope.evalType(expr.Args[0])
 			if err != nil {
@@ -92,22 +92,25 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fun.Kind() != reflect.Func {
-		// xxx err
-	}
-	var (
-		args     []reflect.Value
-		variadic = expr.Ellipsis != token.NoPos
-	)
-	for _, arg := range expr.Args {
-		v, err := scope.eval1(arg)
-		if err != nil {
-			return nil, err
+	switch fun.Kind() {
+	case reflect.Func:
+		var (
+			args     []reflect.Value
+			variadic = expr.Ellipsis != token.NoPos
+		)
+		for _, arg := range expr.Args {
+			v, err := scope.eval1(arg)
+			if err != nil {
+				return nil, err
+			}
+			append(args, v)
 		}
-		append(args, v)
+		vals := fun.Call(args)
+		return vals, nil
+
+		// xxx other cases, e.g. a type conversion
 	}
-	vals := fun.Call(args)
-	return vals, nil
+	return nil, errArgType
 }
 
 func resolveArrayPtr(v reflect.Value) reflect.Value {
@@ -123,7 +126,14 @@ func resolveArrayPtr(v reflect.Value) reflect.Value {
 	return v.Elem()
 }
 
-func fnWrapper(scope *Scope, recv *ast.FieldList, typ *ast.FuncType, body *ast.BlockStmt) (func([]reflect.Value) []reflect.Value, error) {
+type wrappedFn func([]reflect.Value) []reflect.Value
+
+// Function fnWrapper is for ordinary functions only.  Because reflect
+// does not allow adding methods to types, we have to simulate methods
+// ourselves. We do this with methodWrapper, below, which allows
+// calling methods like:
+//   wrappedMethod(receiver)(other args...)
+func fnWrapper(scope *Scope, recv *ast.FieldList, typ *ast.FuncType, body *ast.BlockStmt) (wrappedFn, error) {
 	var ftypes, rtypes []reflect.Type
 	for _, f := range typ.Params.List {
 		ftype, err := scope.evalType(f.Type)
@@ -183,4 +193,8 @@ func fnWrapper(scope *Scope, recv *ast.FieldList, typ *ast.FuncType, body *ast.B
 		}
 		// xxx unmarshal return val(s) from activation record and return them
 	}
+}
+
+func methodWrapper(scope *Scope, recv *ast.FieldList, typ *ast.FuncType, body *ast.BlockStmt) (func(reflect.Value) wrappedFn, error) {
+	// ...
 }
