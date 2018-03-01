@@ -1,2 +1,2 @@
-// Ego - interpreter for Go
+// Ego - Embedded Go interpreter
 package ego

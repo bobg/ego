@@ -1,86 +1,107 @@
 package ego
 
-import (
-	"go/ast"
-	"reflect"
-)
-
-type lazytype struct {
-	source *ast.TypeSpec
-	typ    reflect.Type
-}
+import "sync"
 
 type Scope struct {
+	mu     sync.RWMutex
 	parent *Scope
+	objs   map[string]interface{}
+}
 
-	// values are reflect.Value, lazytype, or imported Scopes
-	objs map[string]interface{}
+type builtin int
+
+const (
+	builtinBool builtin = 1 + iota
+	builtinByte
+	builtinComplex64
+	builtinComplex128
+	builtinError
+	builtinFloat32
+	builtinFloat64
+	builtinInt
+	builtinInt8
+	builtinInt16
+	builtinInt32
+	builtinInt64
+	builtinRune
+	builtinString
+	builtinUint
+	builtinUint8
+	builtinUint16
+	builtinUint32
+	builtinUint64
+	builtinUintptr
+	builtinTrue
+	builtinFalse
+	builtinIota
+	builtinNil
+	builtinAppend
+	builtinCap
+	builtinClose
+	builtinComplex
+	builtinCopy
+	builtinDelete
+	builtinImag
+	builtinLen
+	builtinMake
+	builtinNew
+	builtinPanic
+	builtinPrint
+	builtinPrintln
+	builtinReal
+	builtinRecover
+)
+
+var universe = &Scope{
+	objs: map[string]interface{}{
+		"bool":       builtinBool,
+		"byte":       builtinByte,
+		"complex64":  builtinComplex64,
+		"complex128": builtinComplex128,
+		"error":      builtinError,
+		"float32":    builtinFloat32,
+		"float64":    builtinFloat64,
+		"int":        builtinInt,
+		"int8":       builtinInt8,
+		"int16":      builtinInt16,
+		"int32":      builtinInt32,
+		"int64":      builtinInt64,
+		"rune":       builtinRune,
+		"string":     builtinString,
+		"uint":       builtinUint,
+		"uint8":      builtinUint8,
+		"uint16":     builtinUint16,
+		"uint32":     builtinUint32,
+		"uint64":     builtinUint64,
+		"uintptr":    builtinUintptr,
+		"true":       builtinTrue,
+		"false":      builtinFalse,
+		"iota":       builtinIota,
+		"nil":        builtinNil,
+		"append":     builtinAppend,
+		"cap":        builtinCap,
+		"close":      builtinClose,
+		"complex":    builtinComplex,
+		"copy":       builtinCopy,
+		"delete":     builtinDelete,
+		"imag":       builtinImag,
+		"len":        builtinLen,
+		"make":       builtinMake,
+		"new":        builtinNew,
+		"panic":      builtinPanic,
+		"print":      builtinPrint,
+		"println":    builtinPrintln,
+		"real":       builtinReal,
+		"recover":    builtinRecover,
+	},
 }
 
 func NewScope(parent *Scope) *Scope {
+	if parent == nil {
+		parent = universe
+	}
 	return &Scope{
 		parent: parent,
 		objs:   make(map[string]interface{}),
 	}
-}
-
-func (s *Scope) Lookup(name string) (reflect.Value, error) {
-	if val, ok := s.objs[name]; ok {
-		if val, ok := val.(reflect.Value); ok {
-			return val
-		}
-		// xxx err
-	}
-	if s.parent != nil {
-		return s.parent.Lookup(name)
-	}
-	// xxx err
-}
-
-func (s *Scope) LookupType(name string) (reflect.Type, error) {
-	if val, ok := s.objs[name]; ok {
-		if val, ok := val.(lazytype); ok {
-			if val.typ == nil {
-				// xxx compute val.typ
-			}
-			return val.typ, nil
-		}
-		// xxx err
-	}
-	if s.parent != nil {
-		return s.parent.LookupType(name)
-	}
-	// xxx err
-}
-
-func (s *Scope) LookupScope(name string) (*Scope, error) {
-	if val, ok := s.objs[name]; ok {
-		if val, ok := val.(*Scope); ok {
-			return val, nil
-		}
-	}
-	if s.parent != nil {
-		return s.parent.LookupScope(name)
-	}
-}
-
-// Assign locates name and sets its value to val. It is an error for
-// name not to exist.
-func (s *Scope) Assign(name string, val reflect.Value) error {
-	if _, ok := s.objs[name]; ok {
-		s.objs[name] = val
-		return nil
-	}
-	if s.parent != nil {
-		return s.parent.Assign(name, val)
-	}
-	// xxx err
-}
-
-func (s *Scope) Add(name string, val reflect.Value) {
-	s.objs[name] = val
-}
-
-func (s *Scope) AddType(name string, source *ast.TypeSpec) {
-	s.objs[name] = lazytype{source: source}
 }

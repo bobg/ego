@@ -10,6 +10,10 @@ import (
 
 func (scope *Scope) evalType(expr ast.Expr) (reflect.Type, error) {
 	switch expr := expr.(type) {
+	case *ast.Ident:
+	case *ast.ParenExpr:
+	case *ast.SelectorExpr:
+	case *ast.StarExpr:
 	case *ast.ArrayType:
 		eltType, err := scope.evalType(expr.Elt)
 		if err != nil {
