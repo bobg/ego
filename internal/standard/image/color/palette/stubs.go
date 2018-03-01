@@ -4,4 +4,3 @@ import (
 	"image/color/palette"
 	"reflect"
 )
-

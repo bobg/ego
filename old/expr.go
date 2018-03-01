@@ -301,7 +301,6 @@ func (scope *Scope) eval(expr ast.Expr) ([]reflect.Value, error) {
 		return []reflect.Value{res}, nil
 
 	case *ast.TypeAssertExpr:
-		
 
 	case *ast.CallExpr:
 		return scope.evalCall(expr)

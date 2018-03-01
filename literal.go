@@ -4,10 +4,11 @@ import (
 	"go/ast"
 	"reflect"
 	"strconv"
+
+	"github.com/bobg/ego/refl"
 )
 
-// xxx are "true" and "false" BasicLits or Idents? do we need a "universe" scope?
-func (s *Scope) evalBasicLit(expr *ast.BasicLit) (*Value, error) {
+func (s *Scope) evalBasicLit(expr *ast.BasicLit) (*refl.Value, error) {
 	if x, err := strconv.ParseUint(expr.Value, 0, 64); err == nil {
 		return &Value{R: reflect.ValueOf(x)}, nil // xxx really we want an untyped int constant
 	}

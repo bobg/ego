@@ -73,7 +73,7 @@ func (scope *Scope) evalCall(expr *ast.CallExpr) ([]reflect.Value, error) {
 				return nil, err
 			}
 			switch typ.Kind() {
-				// xxx
+			// xxx
 			}
 
 		case "append":

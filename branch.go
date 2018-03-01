@@ -1,11 +1,14 @@
 package ego
 
 import (
+	"errors"
 	"go/ast"
 	"go/token"
 
 	"github.com/bobg/ego/refl"
 )
+
+var errBadBranch = errors.New("bad branch")
 
 func (s *Scope) execReturn(stmt *ast.ReturnStmt) (*Scope, *branch, error) {
 	var (
@@ -36,13 +39,13 @@ func (s *Scope) execBranch(stmt *ast.BranchStmt) (*Scope, *branch, error) {
 	}
 	switch stmt.Tok {
 	case token.BREAK:
-		return s, &branch{typ: branchBreak, label: label}
+		return s, &branch{typ: branchBreak, label: label}, nil
 	case token.CONTINUE:
-		return s, &branch{typ: branchContinue, label: label}
+		return s, &branch{typ: branchContinue, label: label}, nil
 	case token.GOTO:
-		return s, &branch{typ: branchGoto, label: label}
+		return s, &branch{typ: branchGoto, label: label}, nil
 	case token.FALLTHROUGH:
-		return s, &branch{typ: branchFallthrough}
+		return s, &branch{typ: branchFallthrough}, nil
 	}
-	// xxx err
+	return nil, nil, errBadBranch
 }

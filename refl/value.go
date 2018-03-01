@@ -1,14 +1,19 @@
 package refl
 
-import "reflect"
+import (
+	"errors"
+	"reflect"
+)
+
+var errBadValue = errors.New("bad value")
 
 type Value struct {
-	R reflect.Value
+	R *reflect.Value
 }
 
-func (v Value) Type() Type {
+func (v Value) Type() (Type, error) {
 	if v.R != nil {
-		return Type{R: v.R.Type()}
+		return Type{R: v.R.Type()}, nil
 	}
-	// xxx err
+	return Type{}, errBadValue
 }

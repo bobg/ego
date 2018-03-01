@@ -2,7 +2,6 @@ package reflect
 
 import (
 	"reflect"
-	"reflect"
 )
 
 var MakeFunc = reflect.ValueOf(reflect.MakeFunc)
