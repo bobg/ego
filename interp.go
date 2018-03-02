@@ -62,16 +62,26 @@ func (in *Interp) ImportPath(importPath string) (*Scope, error) {
 	in.scopes[importPath] = pkgScope
 
 	for _, f := range pkg.Files {
-		err = in.ImportFile(pkgScope, f)
+		err = in.doImportFile(pkgScope, f)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return pkgScope, nil
+	err = pkgScope.initializeVars()
+	return pkgScope, err
 }
 
 func (in *Interp) ImportFile(pkgScope *Scope, f *ast.File) error {
+	err := doImportFile(pkgScope, f)
+	if err != nil {
+		return err
+	}
+	err = pkgScope.initializeVars()
+	return err
+}
+
+func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 	fileScope := NewScope(pkgScope)
 	for _, spec := range f.Imports {
 		p, err := literalStr(spec.Path.Value)
@@ -195,6 +205,7 @@ func (in *Interp) ImportFile(pkgScope *Scope, f *ast.File) error {
 			}
 
 		case *ast.FuncDecl:
+			// xxx check for init()
 			if decl.Recv == nil {
 				// regular function
 				scope.SetFunc(decl.Name.Name, makeFunc(decl.Type, decl.Body.List))

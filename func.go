@@ -70,7 +70,7 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 
 		defer func() {
 			deferrals := *fscope.deferrals
-			for i := len(deferrals)-1; i >= 0; i-- {
+			for i := len(deferrals) - 1; i >= 0; i-- {
 				d := deferrals[i]
 				// xxx check d.fun is callable
 				d.fun.Call(d.args)
