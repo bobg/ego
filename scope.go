@@ -1,11 +1,21 @@
 package ego
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/bobg/ego/refl"
+)
+
+type deferral struct {
+	fun  *refl.Value
+	args []*refl.Value
+}
 
 type Scope struct {
-	mu     sync.RWMutex
-	parent *Scope
-	objs   map[string]interface{}
+	mu        sync.RWMutex
+	parent    *Scope
+	objs      map[string]interface{}
+	deferrals *[]deferral // nil pointer means not a function scope
 }
 
 type builtin int
@@ -103,5 +113,13 @@ func NewScope(parent *Scope) *Scope {
 	return &Scope{
 		parent: parent,
 		objs:   make(map[string]interface{}),
+	}
+}
+
+func (s *Scope) addDefer(f *refl.Value, args []*refl.Value) {
+	if s.deferrals != nil {
+		(*s.deferrals) = append((*s.deferrals), deferral{f, args})
+	} else if s.parent != nil {
+		s.parent.addDefer(f, args)
 	}
 }

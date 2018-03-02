@@ -26,7 +26,7 @@ func (s *Scope) evalBasicLit(expr *ast.BasicLit) (*refl.Value, error) {
 	// xxx err
 }
 
-func (s *Scope) evalCompositeLit(expr *ast.CompositeLit) (*Value, error) {
+func (s *Scope) evalCompositeLit(expr *ast.CompositeLit) (*refl.Value, error) {
 	typ, err := s.EvalType(expr.Type)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (s *Scope) evalCompositeLit(expr *ast.CompositeLit) (*Value, error) {
 	// xxx err
 }
 
-func (s *Scope) evalStructLit(typ Type, expr *ast.CompositeLit) (*Value, error) {
+func (s *Scope) evalStructLit(typ Type, expr *ast.CompositeLit) (*refl.Value, error) {
 	var (
 		expectKV bool
 		result   = NewValue(typ)
@@ -90,11 +90,11 @@ func (s *Scope) evalStructLit(typ Type, expr *ast.CompositeLit) (*Value, error) 
 	return result, nil
 }
 
-func (s *Scope) evalArrayLit(typ Type, expr *ast.CompositeLit) (*Value, error) {
+func (s *Scope) evalArrayLit(typ Type, expr *ast.CompositeLit) (*refl.Value, error) {
 	// xxx
 }
 
-func (s *Scope) evalSliceLit(typ Type, expr *ast.CompositeLit) (*Value, error) {
+func (s *Scope) evalSliceLit(typ Type, expr *ast.CompositeLit) (*refl.Value, error) {
 	result := NewValue(typ)
 	for i, elt := range expr.Elts {
 		val, err := s.Eval1(elt)
@@ -109,7 +109,7 @@ func (s *Scope) evalSliceLit(typ Type, expr *ast.CompositeLit) (*Value, error) {
 	return result, nil
 }
 
-func (s *Scope) evalMapLit(typ Type, expr *ast.CompositeLit) (*Value, error) {
+func (s *Scope) evalMapLit(typ Type, expr *ast.CompositeLit) (*refl.Value, error) {
 	result := NewValue(typ)
 	for i, elt := range expr.Elts {
 		elt, ok := elt.(*ast.KeyValueExpr)

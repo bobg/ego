@@ -65,9 +65,18 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 
 	impl := func(args []reflect.Value) []reflect.Value {
 		// check len(args) against expected number of params
-		// xxx defer list
 		fscope := NewScope(s)
-		// xxx decorate fscope with defer list
+		fscope.deferrals = new([]deferral)
+
+		defer func() {
+			deferrals := *fscope.deferrals
+			for i := len(deferrals)-1; i >= 0; i-- {
+				d := deferrals[i]
+				// xxx check d.fun is callable
+				d.fun.Call(d.args)
+			}
+		}()
+
 		var i int
 		for _, p := range expr.Type.Params.List {
 			for _, n := range p.Names {

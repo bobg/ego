@@ -19,7 +19,6 @@ func (s *Scope) execDefer(stmt *ast.DeferStmt) (*Scope, *branch, error) {
 		}
 		vals = append(vals, val)
 	}
-	// xxx walk up the scope hierarchy to the nearest enclosing function
-	// scope and add (f,vals) to the defer list
+	s.addDefer(f, vals)
 	return s, nil, nil
 }
