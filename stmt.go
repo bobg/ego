@@ -23,7 +23,20 @@ type branch struct {
 }
 
 func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
+	origScope := s
+
+	var gotoBranch *branch
+
 	for _, stmt := range stmts {
+		if gotoBranch != nil {
+			if l, ok := stmt.(*ast.LabeledStmt); ok && l.Label.Name == gotoBranch.label {
+				gotoBranch = nil
+			} else if isNewScopeStmt(stmt) {
+				return origScope, gotoBranch, nil
+			} else {
+				continue
+			}
+		}
 		s, b, err := s.ExecStmt(stmt)
 		if err != nil {
 			return nil, nil, err
@@ -31,19 +44,24 @@ func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 		if b != nil {
 			switch b.typ {
 			case branchBreak:
-				// xxx
+				return origScope, b, nil
+
 			case branchContinue:
-				// xxx
+				return origScope, b, nil
+
 			case branchGoto:
-				// xxx
+				gotoBranch = b
+				continue
+
 			case branchFallthrough:
-				// xxx
+				return origScope, b, nil
+
 			case branchReturn:
-				return s, b, nil
+				return origScope, b, nil
 			}
 		}
 	}
-	return s, nil, nil
+	return origScope, gotoBranch, nil
 }
 
 func (s *Scope) ExecStmt(stmt ast.Stmt) (*Scope, *branch, error) {
@@ -55,21 +73,20 @@ func (s *Scope) ExecStmt(stmt ast.Stmt) (*Scope, *branch, error) {
 		return s, nil, nil
 
 	case *ast.LabeledStmt:
-		s, b, err := s.ExecStmt(stmt.Stmt)
-		if err != nil {
-			return nil, nil, err
+		switch inner := stmt.Stmt.(type) {
+		case *ast.ForStmt:
+			return s.execFor(inner, stmt.Label.Name)
+
+		case *ast.SwitchStmt:
+			return s.execSwitch(inner, stmt.Label.Name)
+
+		case *ast.TypeSwitchStmt:
+			return s.execTypeSwitch(inner, stmt.Label.Name)
+
+		case *ast.SelectStmt:
+			return s.execSelect(inner, stmt.Label.Name)
 		}
-		if b != nil {
-			switch branch.typ {
-			case branchBreak:
-			case branchContinue:
-			case branchGoto:
-			case branchFallthrough:
-			case branchReturn:
-				return s, b, nil
-			}
-		}
-		return s, nil, nil
+		return s.ExecStmt(stmt.Stmt)
 
 	case *ast.ExprStmt:
 		_, err := s.Eval(stmt.X)
@@ -109,19 +126,19 @@ func (s *Scope) ExecStmt(stmt ast.Stmt) (*Scope, *branch, error) {
 		// xxx error - outside switch or typeswitch
 
 	case *ast.SwitchStmt:
-		return s.execSwitch(stmt)
+		return s.execSwitch(stmt, "")
 
 	case *ast.TypeSwitchStmt:
-		return s.execTypeSwitch(stmt)
+		return s.execTypeSwitch(stmt, "")
 
 	case *ast.CommClause:
 		// xxx error - outside select
 
 	case *ast.SelectStmt:
-		return s.execSelect(stmt)
+		return s.execSelect(stmt, "")
 
 	case *ast.ForStmt:
-		return s.execFor(stmt)
+		return s.execFor(stmt, "")
 
 	case *ast.RangeStmt:
 		return s.execRange(stmt)
