@@ -29,6 +29,14 @@ func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 
 	for _, stmt := range stmts {
 		if gotoBranch != nil {
+			// xxx this logic is wrong. it rejects this:
+			//   stmt1
+			//   LABEL: stmt2
+			//   var := expr
+			//   goto LABEL
+			// but it shouldn't. it should instead allow jumping to LABEL
+			// using the pre-"var" scope. (however, it _should_ reject
+			// jumping into any scope defined AFTER the goto.)
 			if l, ok := stmt.(*ast.LabeledStmt); ok && l.Label.Name == gotoBranch.label {
 				gotoBranch = nil
 			} else if isNewScopeStmt(stmt) {

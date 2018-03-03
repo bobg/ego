@@ -18,6 +18,8 @@ type Scope struct {
 	deferrals *[]deferral // nil pointer means not a function scope
 }
 
+type uninitialized ast.Expr
+
 type builtin int
 
 const (
@@ -122,4 +124,36 @@ func (s *Scope) addDefer(f *refl.Value, args []*refl.Value) {
 	} else if s.parent != nil {
 		s.parent.addDefer(f, args)
 	}
+}
+
+// xxx check first that name is undefined?
+func (s *Scope) Add(name string, val interface{}) {
+	s[name] = val
+}
+
+func (s *Scope) Set(name string, val interface{}) error {
+	if _, ok := s[name]; ok {
+		s[name] = val
+		return nil
+	}
+	if s.parent == nil || s.parent.isUniverse() {
+		// xxx err
+	}
+	return s.parent.Set(name, val)
+}
+
+func (s *Scope) Lookup(name) interface{} {
+	if val, ok := s[name]; ok {
+		return val
+	}
+	if s.parent == nil {
+		return nil
+	}
+	return s.parent.Lookup(name)
+}
+
+func (s *Scope) LookupValue(name) *refl.Value {
+	l := s.Lookup(name)
+	val, _ := l.(*refl.Value)
+	return val
 }

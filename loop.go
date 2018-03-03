@@ -61,4 +61,35 @@ func (s *Scope) execFor(stmt *ast.ForStmt, label string) (*Scope, *branch, error
 }
 
 func (s *Scope) execRange(stmt *ast.RangeStmt, label string) (*Scope, *branch, error) {
+	origScope := s
+
+	if stmt.Tok == token.DEFINE {
+		s = NewScope(s)
+	}
+
+	// xxx do not eval X if at most one iteration var is present and
+	// len(X) is constant (https://golang.org/ref/spec#RangeClause)
+	rexp, err := s.Eval1(stmt.X)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch rexp.Kind() {
+	case refl.Array, refl.Slice, refl.String:
+		l, _ := rexp.Len()
+		for i := 0; i < l; i++ {
+			// xxx assign to key, value if present
+			_, b, err := s.ExecStmts(stmt.Body.List)
+			if err != nil {
+				return nil, nil, err
+			}
+			if b != nil {
+				// xxx
+			}
+		}
+		return origScope, nil, nil
+
+	case refl.Map:
+	case refl.Chan:
+	}
 }

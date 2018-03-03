@@ -10,16 +10,18 @@ func (s *Scope) initializeVars() error {
 			initializedAny   bool
 		)
 		for name, obj := range s.objs {
-			if xxx /* uninitialized */ {
-				anyUninitialized = true
-				if xxx /* can initialize */ {
-					val, err := s.Eval1(xxx)
-					if err != nil {
-						return err
-					}
-					s.objs[name] = val
-					initializedAny = true
+			obj, ok := obj.(uninitialized)
+			if !ok {
+				continue
+			}
+			anyUninitialized = true
+			if xxx /* can initialize */ {
+				val, err := s.Eval1(obj)
+				if err != nil {
+					return err
 				}
+				s.objs[name] = val
+				initializedAny = true
 			}
 		}
 		if !anyUninitialized {

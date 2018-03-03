@@ -181,24 +181,16 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 						// xxx err
 					}
 					if len(spec.Values) > 0 {
+						// xxx let spec.Values be a single expr producing len(spec.Names) values
 						if len(spec.Values) != len(spec.Names) {
 							// xxx err
 						}
-						var vals []Value
-						for _, expr := range spec.Values {
-							val, err := fileScope.Eval(expr)
-							if err != nil {
-								return nil, err
-							}
-							// xxx check val is assignable to spec.Type (if present)
-							vals = append(vals, val)
-						}
 						for i, name := range spec.Names {
-							pkgScope.SetValue(name.Name, vals[i])
+							pkgScope.Add(name.Name, uninitialized(spec.Values[i]))
 						}
 					} else {
 						for _, name := range spec.Names {
-							pkgScope.SetValue(name.Name, NewValue(typ))
+							pkgScope.Add(name.Name, NewValue(typ))
 						}
 					}
 				}
