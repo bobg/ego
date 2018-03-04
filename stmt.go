@@ -24,27 +24,11 @@ type branch struct {
 
 func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 	origScope := s
+	scopes := make([]*Scope, len(stmts))
 
-	var gotoBranch *branch
-
-	for _, stmt := range stmts {
-		if gotoBranch != nil {
-			// xxx this logic is wrong. it rejects this:
-			//   stmt1
-			//   LABEL: stmt2
-			//   var := expr
-			//   goto LABEL
-			// but it shouldn't. it should instead allow jumping to LABEL
-			// using the pre-"var" scope. (however, it _should_ reject
-			// jumping into any scope defined AFTER the goto.)
-			if l, ok := stmt.(*ast.LabeledStmt); ok && l.Label.Name == gotoBranch.label {
-				gotoBranch = nil
-			} else if isNewScopeStmt(stmt) {
-				return origScope, gotoBranch, nil
-			} else {
-				continue
-			}
-		}
+	for i := 0; i < len(stmts); {
+		stmt := stmts[i]
+		scopes[i] = s
 		s, b, err := s.ExecStmt(stmt)
 		if err != nil {
 			return nil, nil, err
@@ -58,10 +42,38 @@ func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 				return origScope, b, nil
 
 			case branchGoto:
-				gotoBranch = b
-				continue
+				var found bool
+				for j := 0; j <= i; j++ {
+					if l, ok := stmts[j].(*ast.LabeledStmt); ok && l.Label.Name == b.label {
+						i = j
+						s = scopes[j]
+						found = true
+						break
+					}
+				}
+				if !found {
+					var newScope bool
+					for j := i + 1; j < len(stmts); j++ {
+						if l, ok := stmts[j].(*ast.LabeledStmt); ok && l.Label.Name == b.label {
+							if newScope {
+								// xxx err - cannot goto into a new scope
+							}
+							i = j
+							found = true
+							break
+						}
+						if isNewScopeStmt(stmt) {
+							newScope = true
+						}
+					}
+				}
+				if found {
+					continue
+				}
+				return origScope, b, nil
 
 			case branchFallthrough:
+				// xxx check that i == len(stmts)-1 ?
 				return origScope, b, nil
 
 			case branchReturn:
@@ -69,7 +81,7 @@ func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 			}
 		}
 	}
-	return origScope, gotoBranch, nil
+	return origScope, nil, nil
 }
 
 func (s *Scope) ExecStmt(stmt ast.Stmt) (*Scope, *branch, error) {

@@ -152,27 +152,32 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 		if !ok {
 			// xxx err
 		}
+		var matchType *refl.Type
 		if len(clause.List) > 0 {
-			match := false
 			for _, e := range clause.List {
 				t, err := s.EvalType(e)
 				if err != nil {
 					return nil, nil, err
 				}
-				if xxx /* t matches val.Type() */ {
-					match = true
+				if val.Type().AssignableTo(t) {
+					matchType = t
 					break
 				}
 			}
-			if !match {
+			if matchType == nil {
 				continue
+			}
+			if varName != "" {
+				s = NewScope(s)
+
+				// This makes sure variable varName has the right type in
+				// scope s, even if val is a different (but assignable) type.
+				v := refl.NewValue(matchType)
+				v.Set(val)
+				s.Add(varName, v)
 			}
 		}
 		// default clause or match
-		if varName != "" {
-			s = NewScope(s)
-			s.Add(varName, xxx /* val type-asserted to the matching type */)
-		}
 		_, b, err := s.ExecStmts(clause.Body)
 		if err != nil {
 			return nil, nil, err

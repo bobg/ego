@@ -12,7 +12,7 @@ var errBadBranch = errors.New("bad branch")
 
 func (s *Scope) execReturn(stmt *ast.ReturnStmt) (*Scope, *branch, error) {
 	var (
-		vals []refl.Value
+		vals []*refl.Value
 		err  error
 	)
 	if len(stmt.Results) == 1 {
