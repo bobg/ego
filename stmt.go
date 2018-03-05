@@ -73,7 +73,6 @@ func (s *Scope) ExecStmts(stmts []ast.Stmt) (*Scope, *branch, error) {
 				return origScope, b, nil
 
 			case branchFallthrough:
-				// xxx check that i == len(stmts)-1 ?
 				return origScope, b, nil
 
 			case branchReturn:

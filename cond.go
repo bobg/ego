@@ -167,6 +167,8 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 			if matchType == nil {
 				continue
 			}
+			// xxx if len(clause.List) > 1, varName does not get the type
+			// matchType, but the type of assignExpr.
 			if varName != "" {
 				s = NewScope(s)
 

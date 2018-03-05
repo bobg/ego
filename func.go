@@ -9,13 +9,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
+func (s *Scope) evalFuncLit(expr *ast.FuncLit) (*refl.Value, error) {
+	return s.makeFunc(expr.Type, expr.Body.List)
+}
+
+func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, error) {
 	var (
 		paramTypes, resultTypes     []reflect.Type // n.b. not refl.Type
 		isVariadic, hasNamedReturns bool
 	)
 
-	for i, p := range expr.Type.Params.List {
+	for i, p := range typ.Params.List {
 		if isVariadic {
 			// xxx error - can't have more params after the ellipsis one
 		}
@@ -33,8 +37,8 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 			paramTypes = append(paramTypes, t.R)
 		}
 	}
-	if expr.Type.Results != nil {
-		for i, r := range expr.Type.Results.List {
+	if typ.Results != nil {
+		for i, r := range typ.Results.List {
 			t, err := s.EvalType(r.Type)
 			if err != nil {
 				return nil, errors.Wrapf(err, "eval type of result %d", i)
@@ -55,7 +59,7 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 		}
 	}
 
-	ftype, err := s.EvalType(expr.Type)
+	ftype, err := s.EvalType(typ)
 	if err != nil {
 		return nil, errors.Wrap(err, "eval type of func lit")
 	}
@@ -78,7 +82,7 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 		}()
 
 		var i int
-		for _, p := range expr.Type.Params.List {
+		for _, p := range typ.Params.List {
 			for _, n := range p.Names {
 				arg := args[i]
 				if !arg.Type().AssignableTo(paramTypes[i]) {
@@ -92,8 +96,8 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 			// xxx handle variadic final param
 		}
 		i = 0
-		if expr.Type.Results != nil {
-			for _, r := range expr.Type.Results.List {
+		if typ.Results != nil {
+			for _, r := range typ.Results.List {
 				for _, n := range p.Names {
 					if n != nil {
 						fscope.Add(n.Name, NewValue(&Type{R: resultTypes[i]}))
@@ -103,7 +107,7 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 			}
 		}
 
-		_, branch, err := fscope.ExecStmts(expr.Body.List)
+		_, branch, err := fscope.ExecStmts(stmts)
 		if err != nil {
 			// xxx how to communicate this? panic?
 		}
@@ -114,7 +118,7 @@ func (s *Scope) evalFuncLit(expr *ast.FuncLit) (refl.Value, error) {
 			}
 
 			if hasNamedReturns && len(branch.vals) == 0 {
-				for _, r := range expr.Type.Results.List {
+				for _, r := range typ.Results.List {
 					for _, n := range r.Names {
 						val, err := fscope.Lookup(n.Name)
 						if err != nil {

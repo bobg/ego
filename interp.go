@@ -83,6 +83,8 @@ func (in *Interp) ImportFile(pkgScope *Scope, f *ast.File) error {
 
 func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 	fileScope := NewScope(pkgScope)
+
+	// Process imports first.
 	for _, spec := range f.Imports {
 		p, err := literalStr(spec.Path.Value)
 		if err != nil {
@@ -110,6 +112,25 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 			// xxx SetScope (and other Scope.Set* functions) should ignore a
 			// name of "_"
 			fileScope.SetScope(importName, impScope)
+		}
+	}
+
+	// Process type declarations second, before var, func, and const
+	// decls (which might depend on them).
+	for _, decl := range f.Decls {
+		decl, ok := decl.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if decl.Tok != token.TYPE {
+			continue
+		}
+		for i, spec := range decl.Specs {
+			spec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				// xxx err
+			}
+			pkgScope.SetType(spec.Name.Name, spec.Type)
 		}
 	}
 
@@ -166,13 +187,7 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 				}
 
 			case token.TYPE:
-				for i, spec := range decl.Specs {
-					spec, ok := spec.(*ast.TypeSpec)
-					if !ok {
-						// xxx err
-					}
-					pkgScope.SetType(spec.Name.Name, spec.Type)
-				}
+				// ignore - already handled above
 
 			case token.VAR:
 				for _, spec := range decl.Specs {
@@ -200,7 +215,11 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 			// xxx check for init()
 			if decl.Recv == nil {
 				// regular function
-				scope.SetFunc(decl.Name.Name, makeFunc(decl.Type, decl.Body.List))
+				f, err := fileScope.makeFunc(decl.Type, decl.Body.List)
+				if err != nil {
+					return nil, err
+				}
+				pkgScope.Add(decl.Name.Name, f)
 			} else {
 				// method
 				if len(decl.Recv.List) != 1 {
@@ -211,9 +230,11 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 					// xxx err
 				}
 				recvName := field.Names[0].Name
-				// xxx extract receiver type, which must be an identifier or *identifier
-				// (with parens possible)
-				scope.AddMethod(decl.Name.Name, recvType, recvName, decl.Type, decl.Body.List)
+				recvType, isPtr, err := parseRecvType(field.Type)
+				// xxx find recvType in pkgScope.
+
+				// xxx add method (recvName, isPtr, decl.Type, decl.Body.List)
+				// to type's method set
 			}
 
 		default:
@@ -225,4 +246,25 @@ func (in *Interp) doImportFile(pkgScope *Scope, f *ast.File) error {
 
 func isExported(name string) bool {
 	return unicode.IsUpper(rune(name[0]))
+}
+
+func parseRecvType(expr ast.Expr) (string, bool, err) {
+	switch expr := expr.(type) {
+	case *ast.Ident:
+		return expr.Name, false, nil
+
+	case *ast.ParenExpr:
+		return parseRecvType(expr.X)
+
+	case *ast.StarExpr:
+		name, isPtr, err := parseRecvType(expr.X)
+		if err != nil {
+			return "", false, err
+		}
+		if isPtr {
+			// xxx err
+		}
+		return name, true, nil
+	}
+	// xxx err
 }

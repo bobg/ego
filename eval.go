@@ -21,7 +21,7 @@ func (s *Scope) Eval1(expr ast.Expr) (refl.Value, error) {
 func (s *Scope) Eval(expr ast.Expr) ([]*refl.Value, error) {
 	switch expr := expr.(type) {
 	case *ast.Ident:
-		return s.LookupValue(expr.Name)
+		return []*refl.Value{s.LookupValue(expr.Name)}, nil
 
 	case *ast.Ellipsis:
 		// xxx error - ellipsis out of context
