@@ -162,6 +162,12 @@ func (s *Scope) evalCall(expr *ast.CallExpr) ([]refl.Value, error) {
 		return []refl.Value{conv}, err
 	}
 	var vals []reflect.Value
+	// xxx "As a special case, if the return values of a function or
+	// method g are equal in number and individually assignable to the
+	// parameters of another function or method f, then the call
+	// f(g(parameters_of_g)) will invoke f after binding the return
+	// values of g to the parameters of f in order."
+	// https://golang.org/ref/spec#Calls
 	for _, a := range args {
 		val, err := s.Eval1(a)
 		if err != nil {
