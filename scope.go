@@ -12,7 +12,7 @@ type deferral struct {
 }
 
 type Scope struct {
-	mu        sync.RWMutex
+	mu        sync.RWMutex // protects objs and deferrals
 	parent    *Scope
 	objs      map[string]interface{}
 	deferrals *[]deferral // nil pointer means not a function scope
@@ -119,19 +119,28 @@ func NewScope(parent *Scope) *Scope {
 }
 
 func (s *Scope) addDefer(f *refl.Value, args []*refl.Value) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.deferrals != nil {
 		(*s.deferrals) = append((*s.deferrals), deferral{f, args})
 	} else if s.parent != nil {
+		s.mu.Unlock()
 		s.parent.addDefer(f, args)
 	}
 }
 
 // xxx check first that name is undefined?
 func (s *Scope) Add(name string, val interface{}) {
+	s.mu.Lock()
 	s[name] = val
+	s.mu.Unlock()
 }
 
 func (s *Scope) Set(name string, val interface{}) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s[name]; ok {
 		s[name] = val
 		return nil
@@ -139,16 +148,21 @@ func (s *Scope) Set(name string, val interface{}) error {
 	if s.parent == nil || s.parent.isUniverse() {
 		// xxx err
 	}
+	s.mu.Unlock()
 	return s.parent.Set(name, val)
 }
 
 func (s *Scope) Lookup(name) interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if val, ok := s[name]; ok {
 		return val
 	}
 	if s.parent == nil {
 		return nil
 	}
+	s.mu.RUnlock()
 	return s.parent.Lookup(name)
 }
 

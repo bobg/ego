@@ -1,18 +1,19 @@
 package ego
 
 import (
+	"fmt"
 	"go/ast"
 
 	"github.com/bobg/ego/refl"
 )
 
-func (s *Scope) Eval1(expr ast.Expr) (refl.Value, error) {
+func (s *Scope) Eval1(expr ast.Expr) (*refl.Value, error) {
 	vals, err := s.Eval(expr)
 	if err != nil {
 		return nil, err
 	}
 	if len(vals) != 1 {
-		// xxx err
+		return nil, fmt.Errorf("got %d values, want 1", len(vals))
 	}
 	return vals[0], nil
 }
@@ -24,7 +25,7 @@ func (s *Scope) Eval(expr ast.Expr) ([]*refl.Value, error) {
 		return []*refl.Value{s.LookupValue(expr.Name)}, nil
 
 	case *ast.Ellipsis:
-		// xxx error - ellipsis out of context
+		return nil, fmt.Errorf("'...' out of context")
 
 	case *ast.BasicLit:
 		val, err := s.evalBasicLit(expr)
@@ -73,6 +74,6 @@ func (s *Scope) Eval(expr ast.Expr) ([]*refl.Value, error) {
 		return []*refl.Value{val}, err
 
 	case *ast.KeyValueExpr:
-		// xxx error - out of context
+		return nil, fmt.Errorf("key: value expr out of context")
 	}
 }

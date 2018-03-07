@@ -1,6 +1,7 @@
 package ego
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 )
@@ -18,8 +19,11 @@ func (s *Scope) execIf(stmt *ast.IfStmt) (*Scope, *branch, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	// xxx check cond is boolean
-	if xxx /* cond is true */ {
+	boolval, err := cond.Bool()
+	if err != nil {
+		return nil, nil, err
+	}
+	if boolval {
 		_, b, err := s.ExecStmts(stmt.Body.List)
 		return origScope, b, err
 	}
@@ -50,10 +54,10 @@ func (s *Scope) execSwitch(stmt *ast.SwitchStmt, label string) (*Scope, *branch,
 		tag = refl.ValueOf(true)
 	}
 	fallingThrough := false
-	for _, clause := range stmt.Body.List {
-		clause, ok := clause.(*ast.CaseClause)
+	for _, item := range stmt.Body.List {
+		clause, ok := item.(*ast.CaseClause)
 		if !ok {
-			// xxx err
+			return nil, nil, fmt.Errorf("got statement type %T in switch, want CaseClause", item)
 		}
 		if !fallingThrough && len(clause.List) > 0 {
 			match := false
@@ -120,18 +124,18 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 	switch a := stmt.Assign.(type) {
 	case *ast.AssignStmt:
 		if a.Tok != token.DEFINE {
-			// xxx err
+			return nil, nil, fmt.Errorf("assignment must use := in type switch")
 		}
 		if len(a.Lhs) != 1 {
-			// xxx err
+			return nil, nil, fmt.Errorf("got %d items on lhs of assignment in type switch, may only have 1", len(a.Lhs))
 		}
 		id, ok := a.Lhs[0].(*ast.Ident)
 		if !ok {
-			// xxx err
+			return nil, nil, fmt.Errorf("got %T on lhs of assignment in type switch, want Ident", a.Lhs[0])
 		}
 		varName = id.Name
 		if len(a.Rhs) != 1 {
-			// xxx err
+			return nil, nil, fmt.Errorf("got %d items on rhs of assignment in type switch, may only have 1", len(a.Rhs))
 		}
 		assignExpr = a.Rhs[0]
 
@@ -139,7 +143,7 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 		assignExpr = a.X
 
 	default:
-		// xxx err
+		return nil, nil, fmt.Errorf("got %T in type switch guard, want ExprStmt or AssignStmt", a)
 	}
 
 	val, err := s.Eval1(assignExpr)
@@ -150,7 +154,7 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 	for _, clause := range stmt.Body.List {
 		clause, ok := clause.(*ast.CaseClause)
 		if !ok {
-			// xxx err
+			return nil, nil, fmt.Errorf("got statement type %T in type switch, want CaseClause", item)
 		}
 		var matchType *refl.Type
 		if len(clause.List) > 0 {
@@ -199,7 +203,7 @@ func (s *Scope) execTypeSwitch(stmt *ast.TypeSwitchStmt, label string) (*Scope, 
 				return origScope, b, nil
 
 			case branchFallthrough:
-				// xxx err - not allowed in typeswitches
+				return nil, nil, fmt.Errorf("fallthrough not allowed in type switch")
 			}
 		}
 		break
