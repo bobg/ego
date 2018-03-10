@@ -1,6 +1,7 @@
 package ego
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -21,7 +22,7 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 
 	for i, p := range typ.Params.List {
 		if isVariadic {
-			// xxx error - can't have more params after the ellipsis one
+			return nil, fmt.Errorf("no parameters may follow '...'")
 		}
 		if _, ok := p.Type.(*ast.Ellipsis); ok {
 			isVariadic = true
@@ -31,7 +32,7 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 			return nil, errors.Wrapf(err, "eval type of param %d", i)
 		}
 		if t.R == nil {
-			// xxx err
+			return nil, fmt.Errorf("unsupported parameter type")
 		}
 		for range p.Names {
 			paramTypes = append(paramTypes, t.R)
@@ -44,15 +45,13 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 				return nil, errors.Wrapf(err, "eval type of result %d", i)
 			}
 			if t.R == nil {
-				// xxx err
+				return nil, fmt.Errorf("unsupported result type")
 			}
 			for i, n := range r.Names {
 				if i == 0 {
 					hasNamedReturns = (n != nil)
-				} else if hasNamedReturns && n == nil {
-					// xxx err
-				} else if !hasNamedReturns && n != nil {
-					// xxx err
+				} else if hasNamedReturns == (n == nil) {
+					return nil, fmt.Errorf("either zero results may be named or all must be")
 				}
 				resultTypes = append(resultTypes, t.R)
 			}
@@ -64,7 +63,7 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 		return nil, errors.Wrap(err, "eval type of func lit")
 	}
 	if ftype.R == nil {
-		// xxx err
+		return nil, fmt.Errorf("unsupported function type")
 	}
 
 	impl := func(args []reflect.Value) []reflect.Value {
@@ -76,8 +75,13 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 			deferrals := *fscope.deferrals
 			for i := len(deferrals) - 1; i >= 0; i-- {
 				d := deferrals[i]
-				// xxx check d.fun is callable
-				d.fun.Call(d.args)
+				if d.fun == nil {
+					// xxx err - panic?
+				}
+				_, err := d.fun.Call(d.args)
+				if err != nil {
+					// xxx communicate err out - panic?
+				}
 			}
 		}()
 
@@ -120,8 +124,8 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 			if hasNamedReturns && len(branch.vals) == 0 {
 				for _, r := range typ.Results.List {
 					for _, n := range r.Names {
-						val, err := fscope.Lookup(n.Name)
-						if err != nil {
+						val := fscope.LookupValue(n.Name)
+						if val == nil {
 							// xxx err, but should be impossible
 						}
 						result = append(result, val)
@@ -142,46 +146,59 @@ func (s *Scope) makeFunc(typ *ast.FuncType, stmts []ast.Stmt) (*refl.Value, erro
 	return refl.Value{R: reflect.MakeFunc(ftype.R, impl)}, nil
 }
 
-func (s *Scope) evalCall(expr *ast.CallExpr) ([]refl.Value, error) {
-	f, err := s.Eval1(expr.Fun)
-	if err != nil {
-		return nil, errors.Wrap(err, "eval func of call expr")
+func (s *Scope) evalCall(expr *ast.CallExpr) ([]*refl.Value, error) {
+	if ident, ok := expr.Fun.(*ast.Ident); ok {
+		b := s.Lookup(ident.Name)
+		if b, ok := b.(builtin); ok {
+			return s.evalBuiltinCall(b, expr.Args, expr.Ellipsis != token.NoPos)
+		}
 	}
-	if xxx /* f is builtin */ {
-		return s.evalBuiltinCall(f.Builtin, expr.Args, expr.Ellipsis != token.NoPos)
-	}
-	if xxx /* f is a type */ {
+
+	ft, err := s.EvalType(expr.Fun)
+	if err == nil {
 		if len(expr.Args) != 1 {
-			// xxx err
+			return nil, fmt.Errorf("got %d args for type conversion, want 1", len(expr.Args))
 		}
 		val, err := s.Eval1(expr.Args[0])
 		if err != nil {
 			return nil, err
 		}
-		conv, err := val.Convert(f.Type)
-		return []refl.Value{conv}, err
+		return val.Convert(ft)
 	}
-	var vals []reflect.Value
-	// xxx "As a special case, if the return values of a function or
-	// method g are equal in number and individually assignable to the
-	// parameters of another function or method f, then the call
-	// f(g(parameters_of_g)) will invoke f after binding the return
-	// values of g to the parameters of f in order."
-	// https://golang.org/ref/spec#Calls
-	for _, a := range args {
-		val, err := s.Eval1(a)
+
+	f, err := s.Eval1(expr.Fun)
+	if err != nil {
+		return nil, errors.Wrap(err, "eval func of call expr")
+	}
+
+	var vals []*refl.Value
+	if len(expr.Args) == 1 {
+		// "As a special case, if the return values of a function or
+		// method g are equal in number and individually assignable to the
+		// parameters of another function or method f, then the call
+		// f(g(parameters_of_g)) will invoke f after binding the return
+		// values of g to the parameters of f in order."
+		// https://golang.org/ref/spec#Calls
+		vals, err = s.Eval(expr.Args[0])
 		if err != nil {
 			return nil, err
 		}
-		if xxx /* val is not a reflect.Value */ {
-			// xxx err
+	} else {
+		for _, a := range args {
+			val, err := s.Eval1(a)
+			if err != nil {
+				return nil, err
+			}
+			if xxx /* val is not a reflect.Value */ {
+				// xxx err
+			}
+			vals = append(vals, val.R)
 		}
-		vals = append(vals, val.R)
 	}
 	return f.Call(vals)
 }
 
-func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]refl.Value, error) {
+func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]*refl.Value, error) {
 	switch b {
 	case builtinBool:
 		return s.doConvert(args, reflect.TypeOf(true))
@@ -250,13 +267,13 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 		return s.doConvert(args, reflect.TypeOf(uintptr(0)))
 
 	case builtinTrue, builtinFalse, builtinIota, builtinNil:
-		// xxx error
+		return nil, fmt.Errorf("not a function")
 
 	case builtinAppend:
 		if len(args) < 2 {
-			// xxx err
+			return nil, fmt.Errorf("got %d arg(s), want >=2", len(args))
 		}
-		var vals []refl.Value
+		var vals []*refl.Value
 		for _, arg := range args {
 			val, err := s.Eval1(arg)
 			if err != nil {
@@ -265,30 +282,36 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 			vals = append(vals, val)
 		}
 		slice := vals[0] // xxx check it's a slice
+		if slice.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("first arg of append is not a slice")
+		}
 		elemType := slice.Type().Elem()
 		for i := 1; i < len(vals)-1; i++ {
 			if !vals[i].Type().AssignableTo(elemType) {
-				// xxx err
+				return nil, fmt.Errorf("type mismatch in append")
 			}
 			slice = slice.Append(vals[i])
 		}
 		last := vals[len(vals)-1]
 		if ellipsis {
-			if !last.Type() != slice.Type() {
-				// xxx err
+			if last.Type() != slice.Type() {
+				return nil, fmt.Errorf("'...' argument to append is not a slice")
+			}
+			if !last.Type().Elem().AssignableTo(elemType) {
+				return nil, fmt.Errorf("'...' argument to append has wrong element type")
 			}
 			slice = slice.AppendSlice(last)
 		} else {
 			if !last.Type().AssignableTo(elemType) {
-				// xxx err
+				return nil, fmt.Errorf("type mismatch in append")
 			}
 			slice = slice.Append(last)
 		}
-		return []refl.Value{slice}, nil
+		return []*refl.Value{slice}, nil
 
 	case builtinCap:
 		if len(args) != 1 {
-			// xxx err
+			return nil, fmt.Errorf("got %d args to cap, want 1", len(args))
 		}
 		val, err := s.Eval1(args[0])
 		if err != nil {
@@ -298,11 +321,11 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 		if err != nil {
 			return nil, err
 		}
-		return []refl.Value{{R: reflect.ValueOf(c)}}, nil
+		return []*refl.Value{{R: reflect.ValueOf(c)}}, nil
 
 	case builtinClose:
 		if len(args) != 1 {
-			// xxx err
+			return nil, fmt.Errorf("got %d args to close, want 1", len(args))
 		}
 		val, err := s.Eval1(args[0])
 		if err != nil {
@@ -313,7 +336,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 
 	case builtinComplex:
 		if len(args) != 2 {
-			// xxx err
+			return nil, fmt.Errorf("got %d arg(s) to complex, want 2", len(args))
 		}
 		re, err := s.Eval1(args[0])
 		if err != nil {
@@ -324,7 +347,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 			return nil, err
 		}
 		// xxx check types of re and im
-		return []refl.Value{{R: reflect.ValueOf(complex(re, im))}}, nil
+		return []*refl.Value{{R: reflect.ValueOf(complex(re, im))}}, nil
 
 	case builtinCopy:
 		if len(args) != 2 {
@@ -354,7 +377,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 			// xxx err
 		}
 		n := Copy(dst, src)
-		return []refl.Value{{R: reflect.ValueOf(n)}}, nil
+		return []*refl.Value{{R: reflect.ValueOf(n)}}, nil
 
 	case builtinDelete:
 		if len(args) != 2 {
@@ -389,7 +412,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 		if err != nil {
 			return nil, err
 		}
-		return []refl.Value{{R: reflect.ValueOf(l)}}, nil
+		return []*refl.Value{{R: reflect.ValueOf(l)}}, nil
 
 	case builtinMake:
 
@@ -401,7 +424,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 		if err != nil {
 			return nil, err
 		}
-		return []refl.Value{NewValue(typ)}, nil
+		return []*refl.Value{NewValue(typ)}, nil
 
 	case builtinPanic:
 	case builtinPrint:
@@ -410,7 +433,7 @@ func (s *Scope) evalBuiltinCall(b builtin, args []ast.Expr, ellipsis bool) ([]re
 	}
 }
 
-func (s *Scope) doConvert(args []ast.Expr, rt reflect.Type) ([]refl.Value, error) {
+func (s *Scope) doConvert(args []ast.Expr, rt reflect.Type) ([]*refl.Value, error) {
 	if len(args) != 1 {
 		// xxx err
 	}
@@ -419,5 +442,5 @@ func (s *Scope) doConvert(args []ast.Expr, rt reflect.Type) ([]refl.Value, error
 		return nil, err
 	}
 	conv, err := val.Convert(&Type{R: rt})
-	return []refl.Value{conv}, err
+	return []*refl.Value{conv}, err
 }
